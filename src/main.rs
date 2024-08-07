@@ -10,7 +10,11 @@ pub enum Op {
     Jmp(usize),   // unconditional jump to a label
     CJmp(usize),  // pop a value off the stack and jump if the value is non-zero
     Put,          // pop a value off the stack and write it to stdout
-    Dup,          // duplicate the top value onto the stack.
+    Dup,          // duplicate the top value onto the stack
+    Swap,         // swap the top two values on the stack
+    Eq,           // pop two values and put a one onto the stack if a == b, otherwise put zero
+    Lt,           // pop two values and put a one onto the stack if a < b, otherwise put zero
+    Gt,           // pop two values and put a one onto the stack if a > b, otherwise put zero
 }
 
 pub struct VM {
@@ -100,6 +104,27 @@ impl VM {
                     let a = self.stack.pop()?;
                     self.stack.push(a);
                     self.stack.push(a);
+                }
+                Op::Swap => {
+                    let a = self.stack.pop()?;
+                    let b = self.stack.pop()?;
+                    self.stack.push(a);
+                    self.stack.push(b);
+                }
+                Op::Eq => {
+                    let a = self.stack.pop();
+                    let b = self.stack.pop();
+                    self.stack.push(if a == b { 1 } else { 0 });
+                }
+                Op::Lt => {
+                    let a = self.stack.pop();
+                    let b = self.stack.pop();
+                    self.stack.push(if a < b { 1 } else { 0 });
+                }
+                Op::Gt => {
+                    let a = self.stack.pop();
+                    let b = self.stack.pop();
+                    self.stack.push(if a < b { 1 } else { 0 });
                 }
             }
             i += 1;
