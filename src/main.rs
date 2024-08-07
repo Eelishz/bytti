@@ -4,8 +4,8 @@ pub enum Op {
     Mul,          // pop two values, multiply them, and push the result
     Div,          // pop two values, divide them, and push the result
     Lit(i64),     // push a literal onto the stack
-    Load(usize),  // load a value from memory and push it onto the stack
-    Store(usize), // pop a value and store it in memory
+    Load,         // load a value from memory and push it onto the stack
+    Store,        // pop a value and store it in memory
     Label(usize), // create a label to jump to later
     Jmp(usize),   // unconditional jump to a label
     CJmp(usize),  // pop a value off the stack and jump if the value is non-zero
@@ -76,17 +76,19 @@ impl VM {
                     self.stack.push(a / b); // TODO: this can fail
                 }
                 Op::Lit(x) => self.stack.push(*x),
-                Op::Load(label) => {
-                    let a = self.memory[*label];
+                Op::Load => {
+                    let ptr = self.stack.pop()? as usize; // TODO: deal with negatives
+                    let a = self.memory[ptr];
                     self.stack.push(a);
                 }
-                Op::Store(label) => {
+                Op::Store => {
+                    let ptr = self.stack.pop()? as usize;
                     let a = self.stack.pop()?;
-                    assert!(*label <= self.memory.len());
-                    if self.memory.len() <= *label {
+                    assert!(ptr <= self.memory.len());
+                    if self.memory.len() <= ptr {
                         self.memory.push(a);
                     } else {
-                        self.memory[*label] = a;
+                        self.memory[ptr] = a;
                     }
                 }
                 Op::Label(_) => (),
@@ -137,15 +139,19 @@ fn main() {
     let mut vm = VM::new();
     let program = vec![
         Op::Lit(10),
-        Op::Store(0),
+        Op::Lit(0),
+        Op::Store,
         Op::Label(0),
         Op::Lit(1),
-        Op::Load(0),
+        Op::Lit(0),
+        Op::Load,
         Op::Dup,
         Op::Put,
         Op::Sub,
-        Op::Store(0),
-        Op::Load(0),
+        Op::Lit(0),
+        Op::Store,
+        Op::Lit(0),
+        Op::Load,
         Op::CJmp(0),
         Op::Lit(0),
     ];
@@ -163,9 +169,9 @@ mod tests {
     #[test]
     fn addition() {
         let mut vm = VM::new();
-        let ops = vec![Op::Lit(1), Op::Lit(2), Op::Add];
+        let program = vec![Op::Lit(1), Op::Lit(2), Op::Add];
 
-        let top = vm.excecute(&ops).unwrap();
+        let top = vm.excecute(&program).unwrap();
         assert_eq!(top, 3)
     }
 }
