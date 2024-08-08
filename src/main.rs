@@ -32,6 +32,12 @@ impl VM {
         }
     }
 
+    pub fn dump(&self) {
+        println!("stack {:?}", self.stack);
+        println!("memory {:?}", self.memory);
+        println!("jmp table {:?}", self.jump_table);
+    }
+
     pub fn excecute(&mut self, program: &Vec<Op>) -> Option<i64> {
         // Populate jump table
         for (i, op) in program.iter().enumerate() {
@@ -140,20 +146,21 @@ fn main() {
     let program = vec![
         Op::Lit(10),
         Op::Lit(0),
-        Op::Store,
-        Op::Label(0),
-        Op::Lit(1),
+        Op::Store,    // Store 10 in memory
+        Op::Label(0), // Loop start
         Op::Lit(0),
-        Op::Load,
-        Op::Dup,
-        Op::Put,
-        Op::Sub,
+        Op::Load,   // Load the variable from memory
+        Op::Put,    // Write it to stdout
+        Op::Lit(1), // Put 1 on the stack
         Op::Lit(0),
-        Op::Store,
+        Op::Load, // Load variable
+        Op::Sub,  // Subtract 1 from the variable
         Op::Lit(0),
-        Op::Load,
-        Op::CJmp(0),
+        Op::Store, // Store the result in memory
         Op::Lit(0),
+        Op::Load,    // Load the variable
+        Op::CJmp(0), // If the variable is nonzero go to loop start
+        Op::Lit(0),  // Exit code
     ];
 
     let top = vm.excecute(&program).unwrap();
