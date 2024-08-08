@@ -186,20 +186,14 @@ impl Lexer {
 }
 
 fn main() {
+    let mut args = std::env::args();
+    let program = args.next().unwrap();
+    let input_path = args.next().unwrap();
+    let input = std::fs::read_to_string(input_path).unwrap();
+
+    let bytecode = Lexer::codegen(&input);
     let mut vm = VM::new();
-
-    let program = "
-10 0 store
-0:
-0 load .
-1 0 load -
-0 store
-0 load 0 cjmp
-0
-    ";
-
-    let program = Lexer::codegen(program);
-    let _exit_code = vm.excecute(&program).unwrap();
+    let _exit_code = vm.excecute(&bytecode).unwrap();
 }
 
 #[cfg(test)]
