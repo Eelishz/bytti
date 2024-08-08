@@ -10,11 +10,14 @@ pub enum Op {
     Jmp,          // unconditional jump to a label
     CJmp,         // pop a value off the stack and jump if the value is non-zero
     Put,          // pop a value off the stack and write it to stdout
+    CR,           // write newline to stdout
     Dup,          // duplicate the top value onto the stack
     Swap,         // swap the top two values on the stack
     Eq,           // pop two values and put a one onto the stack if a == b, otherwise put zero
     Lt,           // pop two values and put a one onto the stack if a < b, otherwise put zero
     Gt,           // pop two values and put a one onto the stack if a > b, otherwise put zero
+    Dump,         // debug core dump
+    Halt,         // debug stop
 }
 
 pub struct VM {
@@ -109,7 +112,8 @@ impl VM {
                         i = self.jump_table[label];
                     }
                 }
-                Op::Put => println!("{}", self.stack.pop()?),
+                Op::Put => print!("{}", self.stack.pop()?),
+                Op::CR => println!(""),
                 Op::Dup => {
                     let a = self.stack.pop()?;
                     self.stack.push(a);
@@ -136,8 +140,15 @@ impl VM {
                     let b = self.stack.pop();
                     self.stack.push(if a < b { 1 } else { 0 });
                 }
+                Op::Dump => {
+                    self.dump();
+                }
+                Op::Halt => {
+                    break;
+                }
             }
             i += 1;
+            // std::thread::sleep(std::time::Duration::from_nanos(100));
         }
         self.stack.pop()
     }
@@ -159,11 +170,14 @@ impl Lexer {
                 "jmp" => Op::Jmp,
                 "cjmp" => Op::CJmp,
                 "." => Op::Put,
+                "cr" => Op::CR,
                 "dup" => Op::Dup,
                 "swap" => Op::Swap,
                 "=" => Op::Eq,
                 "<" => Op::Lt,
                 ">" => Op::Gt,
+                "?" => Op::Dump,
+                "halt" => Op::Halt,
                 lit => {
                     let parse_res = lit.parse::<i64>();
                     if parse_res.is_ok() {
@@ -193,7 +207,7 @@ fn main() {
 
     let bytecode = Lexer::codegen(&input);
     let mut vm = VM::new();
-    let _exit_code = vm.excecute(&bytecode).unwrap();
+    let _exit_code = vm.excecute(&bytecode);
 }
 
 #[cfg(test)]
