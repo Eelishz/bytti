@@ -7,8 +7,8 @@ pub enum Op {
     Load,         // load a value from memory and push it onto the stack
     Store,        // pop a value and store it in memory
     Label(usize), // create a label to jump to later
-    Jmp(usize),   // unconditional jump to a label
-    CJmp(usize),  // pop a value off the stack and jump if the value is non-zero
+    Jmp,          // unconditional jump to a label
+    CJmp,         // pop a value off the stack and jump if the value is non-zero
     Put,          // pop a value off the stack and write it to stdout
     Dup,          // duplicate the top value onto the stack
     Swap,         // swap the top two values on the stack
@@ -98,13 +98,15 @@ impl VM {
                     }
                 }
                 Op::Label(_) => (),
-                Op::Jmp(label) => {
-                    i = self.jump_table[*label];
+                Op::Jmp => {
+                    let label = self.stack.pop()? as usize;
+                    i = self.jump_table[label];
                 }
-                Op::CJmp(label) => {
+                Op::CJmp => {
+                    let label = self.stack.pop()? as usize;
                     let a = self.stack.pop()?;
                     if a != 0 {
-                        i = self.jump_table[*label];
+                        i = self.jump_table[label];
                     }
                 }
                 Op::Put => println!("{}", self.stack.pop()?),
@@ -141,30 +143,63 @@ impl VM {
     }
 }
 
+struct Lexer {}
+
+impl Lexer {
+    fn codegen(program: &str) -> Vec<Op> {
+        let mut tokens = Vec::new();
+        for x in program.split_whitespace() {
+            let op = match x {
+                "+" => Op::Add,
+                "-" => Op::Sub,
+                "*" => Op::Mul,
+                "/" => Op::Div,
+                "load" => Op::Load,
+                "store" => Op::Store,
+                "jmp" => Op::Jmp,
+                "cjmp" => Op::CJmp,
+                "." => Op::Put,
+                "dup" => Op::Dup,
+                "swap" => Op::Swap,
+                "=" => Op::Eq,
+                "<" => Op::Lt,
+                ">" => Op::Gt,
+                lit => {
+                    let parse_res = lit.parse::<i64>();
+                    if parse_res.is_ok() {
+                        Op::Lit(parse_res.unwrap())
+                    } else {
+                        let mut label = lit.chars();
+                        if label.next_back() != Some(':') {
+                            println!("{lit}");
+                            assert!(false);
+                        }
+                        let label = label.as_str();
+                        Op::Label(label.parse().unwrap())
+                    }
+                }
+            };
+            tokens.push(op);
+        }
+        tokens
+    }
+}
+
 fn main() {
     let mut vm = VM::new();
-    let program = vec![
-        Op::Lit(10),
-        Op::Lit(0),
-        Op::Store,    // Store 10 in memory
-        Op::Label(0), // Loop start
-        Op::Lit(0),
-        Op::Load,   // Load the variable from memory
-        Op::Put,    // Write it to stdout
-        Op::Lit(1), // Put 1 on the stack
-        Op::Lit(0),
-        Op::Load, // Load variable
-        Op::Sub,  // Subtract 1 from the variable
-        Op::Lit(0),
-        Op::Store, // Store the result in memory
-        Op::Lit(0),
-        Op::Load,    // Load the variable
-        Op::CJmp(0), // If the variable is nonzero go to loop start
-        Op::Lit(0),  // Exit code
-    ];
 
-    let top = vm.excecute(&program).unwrap();
-    println!("{top}");
+    let program = "
+10 0 store
+0:
+0 load .
+1 0 load -
+0 store
+0 load 0 cjmp
+0
+    ";
+
+    let program = Lexer::codegen(program);
+    let _exit_code = vm.excecute(&program).unwrap();
 }
 
 #[cfg(test)]
